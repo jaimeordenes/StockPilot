@@ -21,7 +21,7 @@ export default function ProductsTable() {
   const [page, setPage] = useState(0);
   const limit = 10;
 
-  const { data: productsData, isLoading } = useQuery({
+  const { data: productsData, isLoading } = useQuery<any>({
     queryKey: ["/api/products", { limit, offset: page * limit, search }],
     retry: false,
   });

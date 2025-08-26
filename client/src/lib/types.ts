@@ -114,6 +114,31 @@ export interface ProductFormData {
   maxStock?: number;
   supplierId?: string;
   barcode?: string;
+  // Extended fields
+  ean13?: string;
+  family?: string;
+  subfamily?: string;
+  group?: string;
+  presentation?: string;
+  entryDate?: string; // ISO date
+  expiryDate?: string; // ISO date
+  batch?: string;
+  serialNumber?: string;
+  condition?: string;
+  location?: string;
+  // Provider extended
+  supplierTaxId?: string;
+  supplierContact?: string;
+  supplierAddress?: string;
+  supplierRepresentative?: string;
+  // Document
+  documentType?: string;
+  documentNumber?: string;
+  documentDate?: string;
+  documentTotal?: number;
+  // Admin
+  enteredBy?: string;
+  notes?: string;
 }
 
 export interface WarehouseFormData {

@@ -1,0 +1,794 @@
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Inventario y Control de Bodega - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8'
+                        },
+                        success: {
+                            500: '#10b981',
+                            600: '#059669'
+                        },
+                        warning: {
+                            500: '#f59e0b',
+                            600: '#d97706'
+                        },
+                        danger: {
+                            500: '#ef4444',
+                            600: '#dc2626'
+                        }
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            },
+            darkMode: 'class'
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 font-inter">
+    <!-- @COMPONENT: Layout [Main application shell with sidebar and header] -->
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- @COMPONENT: Sidebar [Navigation menu with modules] -->
+        <div class="hidden md:flex md:flex-shrink-0">
+            <div class="flex flex-col w-64">
+                <div class="flex flex-col flex-grow pt-5 pb-4 overflow-y-auto bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+                    <!-- Logo -->
+                    <div class="flex items-center flex-shrink-0 px-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-boxes text-white text-sm"></i>
+                            </div>
+                            <h1 class="text-xl font-bold text-gray-900 dark:text-white">InventoryPro</h1>
+                        </div>
+                    </div>
+
+                    <!-- User Info -->
+                    <div class="px-4 mt-6">
+                        <div class="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div class="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-sm font-medium" data-bind="user.initials">JD</span>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900 dark:text-white" data-bind="user.name">Juan Pérez</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400" data-bind="user.role">Administrador</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation -->
+                    <nav class="mt-6 flex-1 px-4 space-y-1">
+                        <!-- @STATE: activeModule:string = 'dashboard' -->
+                        
+                        <!-- Dashboard -->
+                        <a href="#" class="bg-primary-50 dark:bg-primary-900 border-r-2 border-primary-500 text-primary-700 dark:text-primary-200 group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                            <i class="fas fa-tachometer-alt text-primary-500 mr-3 flex-shrink-0 h-4 w-4"></i>
+                            Dashboard
+                        </a>
+
+                        <!-- Inventario -->
+                        <a href="#" class="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                            <i class="fas fa-boxes text-gray-400 group-hover:text-gray-500 mr-3 flex-shrink-0 h-4 w-4"></i>
+                            Inventario
+                        </a>
+
+                        <!-- Productos -->
+                        <a href="#" class="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                            <i class="fas fa-cube text-gray-400 group-hover:text-gray-500 mr-3 flex-shrink-0 h-4 w-4"></i>
+                            Productos
+                        </a>
+
+                        <!-- Movimientos -->
+                        <a href="#" class="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                            <i class="fas fa-exchange-alt text-gray-400 group-hover:text-gray-500 mr-3 flex-shrink-0 h-4 w-4"></i>
+                            Movimientos
+                        </a>
+
+                        <!-- Bodegas -->
+                        <a href="#" class="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                            <i class="fas fa-warehouse text-gray-400 group-hover:text-gray-500 mr-3 flex-shrink-0 h-4 w-4"></i>
+                            Bodegas
+                        </a>
+
+                        <!-- Proveedores -->
+                        <a href="#" class="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                            <i class="fas fa-truck text-gray-400 group-hover:text-gray-500 mr-3 flex-shrink-0 h-4 w-4"></i>
+                            Proveedores
+                        </a>
+
+                        <!-- Reportes -->
+                        <a href="#" class="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                            <i class="fas fa-chart-bar text-gray-400 group-hover:text-gray-500 mr-3 flex-shrink-0 h-4 w-4"></i>
+                            Reportes
+                        </a>
+
+                        <!-- Configuración -->
+                        <a href="#" class="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                            <i class="fas fa-cog text-gray-400 group-hover:text-gray-500 mr-3 flex-shrink-0 h-4 w-4"></i>
+                            Configuración
+                        </a>
+                    </nav>
+
+                    <!-- Footer -->
+                    <div class="flex-shrink-0 px-4 pb-4">
+                        <button data-event="click:logout" class="w-full text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                            <i class="fas fa-sign-out-alt text-gray-400 group-hover:text-gray-500 mr-3 flex-shrink-0 h-4 w-4"></i>
+                            Cerrar Sesión
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: Sidebar -->
+
+        <!-- @COMPONENT: MainContent [Main application content area] -->
+        <div class="flex flex-col w-0 flex-1 overflow-hidden">
+            
+            <!-- @COMPONENT: Header [Top navigation bar with search and notifications] -->
+            <div class="relative z-10 flex-shrink-0 flex h-16 bg-white dark:bg-gray-800 shadow border-b border-gray-200 dark:border-gray-700">
+                <!-- Mobile menu button -->
+                <button class="px-4 border-r border-gray-200 dark:border-gray-700 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 md:hidden">
+                    <i class="fas fa-bars h-6 w-6"></i>
+                </button>
+
+                <!-- Search bar -->
+                <div class="flex-1 px-4 flex justify-between items-center">
+                    <div class="flex-1 max-w-2xl flex">
+                        <div class="w-full relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-search h-4 w-4 text-gray-400"></i>
+                            </div>
+                            <input data-implementation="Should implement global search across products, movements, etc."
+                                   type="text" placeholder="Buscar productos, movimientos..." 
+                                   class="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        </div>
+                    </div>
+                    
+                    <!-- Header actions -->
+                    <div class="ml-4 flex items-center space-x-4">
+                        <!-- Theme toggle -->
+                        <button data-event="click:toggleTheme" class="p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md">
+                            <i class="fas fa-moon h-5 w-5"></i>
+                        </button>
+
+                        <!-- Notifications -->
+                        <div class="relative">
+                            <button class="p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md">
+                                <i class="fas fa-bell h-5 w-5"></i>
+                                <span class="absolute top-0 right-0 block h-2 w-2 rounded-full bg-danger-500 ring-2 ring-white dark:ring-gray-800"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: Header -->
+
+            <!-- @COMPONENT: Dashboard [Main dashboard content] -->
+            <main class="flex-1 relative overflow-y-auto focus:outline-none">
+                <div class="py-6">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+                        
+                        <!-- Page header -->
+                        <div class="md:flex md:items-center md:justify-between mb-6">
+                            <div class="flex-1 min-w-0">
+                                <h2 class="text-2xl font-bold leading-7 text-gray-900 dark:text-white sm:text-3xl sm:truncate">
+                                    Dashboard
+                                </h2>
+                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                    Resumen general del inventario y operaciones
+                                </p>
+                            </div>
+                            
+                            <!-- Quick actions -->
+                            <div class="mt-4 flex md:mt-0 md:ml-4 space-x-3">
+                                <button data-event="click:openAddProduct" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                    <i class="fas fa-plus mr-2 h-4 w-4"></i>
+                                    Nuevo Producto
+                                </button>
+                                <button data-event="click:openAddMovement" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                    <i class="fas fa-exchange-alt mr-2 h-4 w-4"></i>
+                                    Registrar Movimiento
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Stats cards -->
+                        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+                            <!-- Total Products -->
+                            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="p-5">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                                                <i class="fas fa-cube text-white text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <div class="ml-5 w-0 flex-1">
+                                            <dl>
+                                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                                                    Total Productos
+                                                </dt>
+                                                <dd class="text-lg font-medium text-gray-900 dark:text-white" data-bind="stats.totalProducts">
+                                                    1,247
+                                                </dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Low Stock Alert -->
+                            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="p-5">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-8 h-8 bg-warning-500 rounded-md flex items-center justify-center">
+                                                <i class="fas fa-exclamation-triangle text-white text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <div class="ml-5 w-0 flex-1">
+                                            <dl>
+                                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                                                    Stock Bajo
+                                                </dt>
+                                                <dd class="text-lg font-medium text-gray-900 dark:text-white" data-bind="stats.lowStockItems">
+                                                    23
+                                                </dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Total Warehouses -->
+                            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="p-5">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                                                <i class="fas fa-warehouse text-white text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <div class="ml-5 w-0 flex-1">
+                                            <dl>
+                                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                                                    Bodegas Activas
+                                                </dt>
+                                                <dd class="text-lg font-medium text-gray-900 dark:text-white" data-bind="stats.activeWarehouses">
+                                                    5
+                                                </dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Recent Movements -->
+                            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="p-5">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
+                                                <i class="fas fa-exchange-alt text-white text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <div class="ml-5 w-0 flex-1">
+                                            <dl>
+                                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                                                    Movimientos Hoy
+                                                </dt>
+                                                <dd class="text-lg font-medium text-gray-900 dark:text-white" data-bind="stats.todayMovements">
+                                                    87
+                                                </dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charts section -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                            <!-- Stock Overview Chart -->
+                            <div class="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="p-6">
+                                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                                        Resumen de Stock por Categoría
+                                    </h3>
+                                    <div class="h-64 bg-gray-50 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                                        <!-- @FUNCTIONALITY: This should implement a donut/pie chart showing stock distribution by category -->
+                                        <div class="text-center">
+                                            <i class="fas fa-chart-pie text-gray-400 text-4xl mb-2"></i>
+                                            <p class="text-gray-500 dark:text-gray-400">Gráfico de Stock por Categoría</p>
+                                            <p class="text-sm text-gray-400 mt-1">Chart.js o D3.js implementación</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Movement Trends Chart -->
+                            <div class="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="p-6">
+                                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                                        Tendencia de Movimientos (Últimos 30 días)
+                                    </h3>
+                                    <div class="h-64 bg-gray-50 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                                        <!-- @FUNCTIONALITY: This should implement a line chart showing entries vs exits over time -->
+                                        <div class="text-center">
+                                            <i class="fas fa-chart-line text-gray-400 text-4xl mb-2"></i>
+                                            <p class="text-gray-500 dark:text-gray-400">Gráfico de Tendencias</p>
+                                            <p class="text-sm text-gray-400 mt-1">Chart.js línea temporal</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity and Alerts -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            
+                            <!-- Low Stock Alerts -->
+                            <div class="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                                            Alertas de Stock Bajo
+                                        </h3>
+                                        <button class="text-primary-600 hover:text-primary-900 text-sm font-medium">
+                                            Ver todas
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="space-y-3">
+                                        <!-- @MAP: lowStockItems.map(item => ( -->
+                                        <div class="flex items-center justify-between p-3 bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 rounded-lg" data-mock="true">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-2 h-2 bg-warning-500 rounded-full"></div>
+                                                <div>
+                                                    <p class="text-sm font-medium text-gray-900 dark:text-white" data-bind="item.name">Laptop HP ProBook 450</p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                        Stock actual: <span data-bind="item.currentStock" class="font-medium">3</span> | 
+                                                        Mínimo: <span data-bind="item.minStock" class="font-medium">5</span>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button data-event="click:restock" data-implementation="Should open restock modal"
+                                                    class="text-xs bg-warning-600 hover:bg-warning-700 text-white px-3 py-1 rounded-md">
+                                                Reabastecer
+                                            </button>
+                                        </div>
+
+                                        <div class="flex items-center justify-between p-3 bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 rounded-lg" data-mock="true">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-2 h-2 bg-warning-500 rounded-full"></div>
+                                                <div>
+                                                    <p class="text-sm font-medium text-gray-900 dark:text-white" data-bind="item.name">Mouse Inalámbrico Logitech</p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                        Stock actual: <span data-bind="item.currentStock" class="font-medium">8</span> | 
+                                                        Mínimo: <span data-bind="item.minStock" class="font-medium">10</span>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button data-event="click:restock" data-implementation="Should open restock modal"
+                                                    class="text-xs bg-warning-600 hover:bg-warning-700 text-white px-3 py-1 rounded-md">
+                                                Reabastecer
+                                            </button>
+                                        </div>
+
+                                        <div class="flex items-center justify-between p-3 bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800 rounded-lg" data-mock="true">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-2 h-2 bg-danger-500 rounded-full"></div>
+                                                <div>
+                                                    <p class="text-sm font-medium text-gray-900 dark:text-white" data-bind="item.name">Cable HDMI 2.0</p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                        Stock actual: <span data-bind="item.currentStock" class="font-medium text-danger-600">0</span> | 
+                                                        Mínimo: <span data-bind="item.minStock" class="font-medium">15</span>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button data-event="click:restock" data-implementation="Should open urgent restock modal"
+                                                    class="text-xs bg-danger-600 hover:bg-danger-700 text-white px-3 py-1 rounded-md">
+                                                Urgente
+                                            </button>
+                                        </div>
+                                        <!-- @END_MAP )) -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Recent Movements -->
+                            <div class="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                                            Movimientos Recientes
+                                        </h3>
+                                        <button class="text-primary-600 hover:text-primary-900 text-sm font-medium">
+                                            Ver historial
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="space-y-3">
+                                        <!-- @MAP: recentMovements.map(movement => ( -->
+                                        <div class="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0" data-mock="true">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                                                    <i class="fas fa-arrow-up text-green-600 text-xs"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="text-sm font-medium text-gray-900 dark:text-white" data-bind="movement.product">Monitor Samsung 24"</p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                        <span data-bind="movement.type">Entrada</span> • <span data-bind="movement.quantity">+15</span> unidades
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400" data-bind="movement.time">Hace 15 min</p>
+                                                <p class="text-xs text-gray-400" data-bind="movement.user">Juan Pérez</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0" data-mock="true">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                                                    <i class="fas fa-arrow-down text-red-600 text-xs"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="text-sm font-medium text-gray-900 dark:text-white" data-bind="movement.product">Teclado Mecánico</p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                        <span data-bind="movement.type">Salida</span> • <span data-bind="movement.quantity">-3</span> unidades
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400" data-bind="movement.time">Hace 32 min</p>
+                                                <p class="text-xs text-gray-400" data-bind="movement.user">María García</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0" data-mock="true">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                                                    <i class="fas fa-exchange-alt text-blue-600 text-xs"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="text-sm font-medium text-gray-900 dark:text-white" data-bind="movement.product">Impresora HP LaserJet</p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                        <span data-bind="movement.type">Transferencia</span> • Bodega A → Bodega B
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400" data-bind="movement.time">Hace 1 hora</p>
+                                                <p class="text-xs text-gray-400" data-bind="movement.user">Carlos Ruiz</p>
+                                            </div>
+                                        </div>
+                                        <!-- @END_MAP )) -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Access Products Table -->
+                        <div class="mt-8">
+                            <div class="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                                            Productos Más Movidos
+                                        </h3>
+                                        <div class="flex space-x-2">
+                                            <input type="text" placeholder="Buscar productos..." 
+                                                   class="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                                            <button class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="overflow-x-auto">
+                                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                                <tr>
+                                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                        Producto
+                                                    </th>
+                                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                        Categoría
+                                                    </th>
+                                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                        Stock Actual
+                                                    </th>
+                                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                        Estado
+                                                    </th>
+                                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                        Última Actualización
+                                                    </th>
+                                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                        Acciones
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                                <!-- @MAP: products.map(product => ( -->
+                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700" data-mock="true">
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <div class="flex items-center">
+                                                            <div class="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded-lg flex items-center justify-center">
+                                                                <i class="fas fa-laptop text-gray-500 text-sm"></i>
+                                                            </div>
+                                                            <div class="ml-4">
+                                                                <div class="text-sm font-medium text-gray-900 dark:text-white" data-bind="product.name">
+                                                                    Laptop Dell Inspiron 15
+                                                                </div>
+                                                                <div class="text-sm text-gray-500 dark:text-gray-400" data-bind="product.code">
+                                                                    SKU: LP-DL-INS15-001
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white" data-bind="product.category">
+                                                        Computadoras
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white" data-bind="product.stock">
+                                                        45
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-success-100 dark:bg-success-900/30 text-success-800 dark:text-success-200">
+                                                            Normal
+                                                        </span>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400" data-bind="product.lastUpdate">
+                                                        Hace 2 horas
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                        <div class="flex justify-end space-x-2">
+                                                            <button data-event="click:viewProduct" class="text-primary-600 hover:text-primary-900 dark:text-primary-400">
+                                                                <i class="fas fa-eye"></i>
+                                                            </button>
+                                                            <button data-event="click:editProduct" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                            <button data-event="click:addMovement" class="text-green-600 hover:text-green-900 dark:text-green-400">
+                                                                <i class="fas fa-plus"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700" data-mock="true">
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <div class="flex items-center">
+                                                            <div class="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded-lg flex items-center justify-center">
+                                                                <i class="fas fa-mobile-alt text-gray-500 text-sm"></i>
+                                                            </div>
+                                                            <div class="ml-4">
+                                                                <div class="text-sm font-medium text-gray-900 dark:text-white" data-bind="product.name">
+                                                                    iPhone 14 Pro Max
+                                                                </div>
+                                                                <div class="text-sm text-gray-500 dark:text-gray-400" data-bind="product.code">
+                                                                    SKU: IP-14-PM-128
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white" data-bind="product.category">
+                                                        Smartphones
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white" data-bind="product.stock">
+                                                        8
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-warning-100 dark:bg-warning-900/30 text-warning-800 dark:text-warning-200">
+                                                            Stock Bajo
+                                                        </span>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400" data-bind="product.lastUpdate">
+                                                        Hace 30 min
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                        <div class="flex justify-end space-x-2">
+                                                            <button data-event="click:viewProduct" class="text-primary-600 hover:text-primary-900 dark:text-primary-400">
+                                                                <i class="fas fa-eye"></i>
+                                                            </button>
+                                                            <button data-event="click:editProduct" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                            <button data-event="click:addMovement" class="text-green-600 hover:text-green-900 dark:text-green-400">
+                                                                <i class="fas fa-plus"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <!-- @END_MAP )) -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Pagination -->
+                                    <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                        <div class="text-sm text-gray-500 dark:text-gray-400">
+                                            Mostrando <span class="font-medium">1</span> a <span class="font-medium">10</span> de <span class="font-medium">97</span> productos
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                                Anterior
+                                            </button>
+                                            <button class="px-3 py-1 text-sm bg-primary-600 text-white rounded-md">1</button>
+                                            <button class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700">2</button>
+                                            <button class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700">3</button>
+                                            <button class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                Siguiente
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </main>
+            <!-- @END_COMPONENT: Dashboard -->
+
+        </div>
+        <!-- @END_COMPONENT: MainContent -->
+
+    </div>
+    <!-- @END_COMPONENT: Layout -->
+
+    <!-- @COMPONENT: ToastNotifications [Success/error notifications] -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2">
+        <!-- Toast notifications will be inserted here by JavaScript -->
+        <!-- Example toast (hidden by default) -->
+        <div class="hidden bg-success-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3">
+            <i class="fas fa-check-circle"></i>
+            <span>Operación completada exitosamente</span>
+            <button class="ml-auto">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: ToastNotifications -->
+
+    <script>
+        // TODO: Implement business logic, API calls, or state management
+        (function() {
+            'use strict';
+            
+            // Theme toggle functionality
+            const themeToggle = document.querySelector('[data-event="click:toggleTheme"]');
+            const html = document.documentElement;
+            
+            // Initialize theme from localStorage or default to light
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            if (currentTheme === 'dark') {
+                html.classList.add('dark');
+                themeToggle.innerHTML = '<i class="fas fa-sun h-5 w-5"></i>';
+            }
+            
+            themeToggle?.addEventListener('click', () => {
+                html.classList.toggle('dark');
+                const isDark = html.classList.contains('dark');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                themeToggle.innerHTML = isDark ? 
+                    '<i class="fas fa-sun h-5 w-5"></i>' : 
+                    '<i class="fas fa-moon h-5 w-5"></i>';
+            });
+
+            // Toast notification system
+            function showToast(message, type = 'success') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                
+                const bgColor = type === 'success' ? 'bg-success-500' : 
+                               type === 'error' ? 'bg-danger-500' : 
+                               'bg-primary-500';
+                
+                const icon = type === 'success' ? 'fa-check-circle' : 
+                            type === 'error' ? 'fa-exclamation-circle' : 
+                            'fa-info-circle';
+                
+                toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 transform transition-transform duration-300 translate-x-full`;
+                toast.innerHTML = `
+                    <i class="fas ${icon}"></i>
+                    <span>${message}</span>
+                    <button class="ml-auto hover:bg-black/20 rounded p-1">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                container.appendChild(toast);
+                
+                // Animate in
+                setTimeout(() => {
+                    toast.classList.remove('translate-x-full');
+                }, 100);
+                
+                // Close button
+                toast.querySelector('button').addEventListener('click', () => {
+                    toast.classList.add('translate-x-full');
+                    setTimeout(() => {
+                        container.removeChild(toast);
+                    }, 300);
+                });
+                
+                // Auto remove after 5 seconds
+                setTimeout(() => {
+                    if (container.contains(toast)) {
+                        toast.classList.add('translate-x-full');
+                        setTimeout(() => {
+                            if (container.contains(toast)) {
+                                container.removeChild(toast);
+                            }
+                        }, 300);
+                    }
+                }, 5000);
+            }
+
+            // Example button interactions
+            document.addEventListener('click', (e) => {
+                const target = e.target.closest('[data-event]');
+                if (!target) return;
+                
+                const event = target.getAttribute('data-event');
+                
+                // Handle different events
+                switch(event) {
+                    case 'click:openAddProduct':
+                        showToast('Abriendo formulario de nuevo producto...', 'info');
+                        break;
+                    case 'click:openAddMovement':
+                        showToast('Abriendo registro de movimiento...', 'info');
+                        break;
+                    case 'click:restock':
+                        showToast('Función de reabastecimiento iniciada', 'success');
+                        break;
+                    case 'click:logout':
+                        if (confirm('¿Está seguro que desea cerrar sesión?')) {
+                            showToast('Cerrando sesión...', 'info');
+                        }
+                        break;
+                    case 'click:viewProduct':
+                    case 'click:editProduct':
+                    case 'click:addMovement':
+                        showToast('Función en desarrollo...', 'info');
+                        break;
+                }
+            });
+
+            // Simulate real-time updates
+            function simulateRealTimeUpdates() {
+                // Update last activity timestamp occasionally
+                const timeElements = document.querySelectorAll('[data-bind*="time"]');
+                // This would connect to WebSocket or polling in real implementation
+                console.log('Real-time updates would be implemented here');
+            }
+
+            // Initialize app
+            setTimeout(() => {
+                showToast('Sistema de inventario cargado correctamente', 'success');
+            }, 1000);
+
+        })();
+    </script>
+</body>
+</html>

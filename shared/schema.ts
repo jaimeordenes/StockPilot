@@ -34,6 +34,8 @@ export const movementTypeEnum = pgEnum('movement_type', ['entry', 'exit', 'trans
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
+  username: varchar("username", { length: 255 }).unique(),
+  password: varchar("password", { length: 255 }),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -93,6 +95,10 @@ export const products = pgTable("products", {
   maxStock: integer("max_stock"),
   supplierId: varchar("supplier_id").references(() => suppliers.id),
   barcode: varchar("barcode", { length: 255 }),
+  // URL to an uploaded attachment (invoice copy, image, etc.)
+  attachmentUrl: varchar("attachment_url", { length: 1024 }),
+  // Arbitrary extended product metadata (family, subfamily, group, presentation, batch, etc.)
+  metadata: jsonb("metadata"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

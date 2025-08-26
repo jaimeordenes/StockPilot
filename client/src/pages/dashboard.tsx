@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import useRequireAuth from "@/hooks/useRequireAuth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import StatsCards from "@/components/dashboard/stats-cards";
@@ -8,6 +9,7 @@ import Charts from "@/components/dashboard/charts";
 import LowStockAlerts from "@/components/dashboard/low-stock-alerts";
 import RecentMovements from "@/components/dashboard/recent-movements";
 import ProductsTable from "@/components/tables/products-table";
+import { useQuery as useRQ } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Plus, ArrowLeftRight } from "lucide-react";
 import type { DashboardStats } from "@/lib/types";
@@ -15,28 +17,27 @@ import type { DashboardStats } from "@/lib/types";
 export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const { ready } = useRequireAuth();
 
-  // Redirect to home if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "No autorizado",
-        description: "Redirigiendo al inicio de sesión...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, isLoading, toast]);
+  // Redirección centralizada en useRequireAuth
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
     retry: false,
   });
 
-  if (isLoading || !isAuthenticated) {
+  // Inventory overview (public)
+  const { data: inventory } = useRQ({
+    queryKey: ['/api/inventory'],
+    queryFn: async () => {
+      const res = await fetch('/api/inventory');
+      if (!res.ok) throw new Error('Failed to fetch inventory');
+      return res.json();
+    },
+    retry: false,
+  });
+
+  if (isLoading || !ready) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="flex items-center space-x-2">
@@ -95,6 +96,42 @@ export default function Dashboard() {
 
       {/* Products table */}
       <ProductsTable />
+
+      {/* Inventory quick list */}
+      <div className="mt-8">
+        <h3 className="text-lg font-medium mb-2">Inventario (resumen)</h3>
+        <div className="mb-2 flex justify-end">
+          <button
+            onClick={() => { window.open('/api/export/inventory','_blank'); }}
+            className="text-xs px-3 py-1 border rounded bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+            data-testid="button-export-inventory"
+          >Exportar CSV (Bajo stock)</button>
+        </div>
+        <div className="bg-white dark:bg-gray-800 shadow rounded">
+          <div className="p-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr>
+                  <th className="px-2 py-1">Código</th>
+                  <th className="px-2 py-1">Producto</th>
+                  <th className="px-2 py-1">Bodega</th>
+                  <th className="px-2 py-1">Cantidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(inventory) && inventory.map((row: any, idx: number) => (
+                  <tr key={idx} className={idx % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900' : ''}>
+                    <td className="px-2 py-1">{row.product_code}</td>
+                    <td className="px-2 py-1">{row.product_name}</td>
+                    <td className="px-2 py-1">{row.warehouse_name}</td>
+                    <td className="px-2 py-1">{row.quantity}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

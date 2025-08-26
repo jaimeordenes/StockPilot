@@ -1,0 +1,27 @@
+[
+  {
+    "column_name": "id",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  },
+  {
+    "column_name": "nombre",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "column_name": "ubicacion",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "capacidad",
+    "data_type": "integer",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "responsable_id",
+    "data_type": "integer",
+    "is_nullable": "YES"
+  }
+]

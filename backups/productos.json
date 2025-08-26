@@ -1,0 +1,23 @@
+{
+  "table": "productos",
+  "rowCount": 1,
+  "rows": [
+    {
+      "id": 1,
+      "codigo": "TEST-SKU-1756238997123",
+      "nombre": "Producto de prueba",
+      "categoria": null,
+      "descripcion": "Insertado por script de prueba",
+      "unidad": "unidad",
+      "precio_compra": "10.50",
+      "precio_venta": "15.00",
+      "stock_min": null,
+      "stock_max": null,
+      "proveedor_id": null,
+      "fecha_caducidad": null,
+      "lote": null,
+      "serie": null,
+      "attachment_url": "/uploads/20c840f5bacff04d"
+    }
+  ]
+}

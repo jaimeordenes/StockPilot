@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { pool } from "./db";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
   insertSupplierSchema,
@@ -9,15 +10,38 @@ import {
   insertProductSchema,
   insertMovementSchema,
 } from "@shared/schema";
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
+  // Basic health endpoint (no auth) for readiness checks
+  app.get('/api/health', (_req, res) => {
+    res.json({ ok: true, time: new Date().toISOString() });
+  });
+
+  // Helper to extract user id from different session shapes
+  function extractUserId(req: any): string | undefined {
+    if (!req.user) return undefined;
+    // OIDC-style
+    if (req.user.claims && req.user.claims.sub) return req.user.claims.sub;
+    // local session created via req.login({ id, ... })
+    if (req.user.id) return req.user.id;
+    // fallback: maybe stored directly as sub
+    if (req.user.sub) return req.user.sub;
+    return undefined;
+  }
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = extractUserId(req);
+      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
@@ -58,6 +82,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/dashboard/movements-today', isAuthenticated, async (_req, res) => {
+    try {
+      const counts = await storage.getTodayMovementTypeCounts();
+      res.json(counts);
+    } catch (e: any) {
+      console.error('Error movements-today', e);
+      res.status(500).json({ error: 'Error obteniendo conteos de movimientos de hoy' });
+    }
+  });
+
+  // Export endpoints (CSV)
+  function sendCsv(res: any, filename: string, headers: string[], rows: any[]) {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+    const escape = (v: any) => {
+      if (v === null || v === undefined) return '';
+      const s = String(v).replace(/"/g, '""');
+      if (/[",\n;]/.test(s)) return '"' + s + '"';
+      return s;
+    };
+  const lines = [headers.join(',')];
+    for (const r of rows) {
+      lines.push(headers.map(h => escape((r as any)[h])).join(','));
+    }
+  // Añadimos BOM UTF-8 para compatibilidad con Excel
+  res.send('\ufeff' + lines.join('\n'));
+  }
+
+  app.get('/api/export/products', isAuthenticated, async (req, res) => {
+    try {
+      const limit = 10_000; // hard cap
+      const { search, categoryId, supplierId, lowStockOnly } = req.query as any;
+      const result = await storage.getProducts(limit, 0, search, categoryId, supplierId, lowStockOnly === 'true');
+      const headers = ['id','code','name','brand','unit','minStock','maxStock','purchasePrice','salePrice','totalStock','isLowStock'];
+      const rows = (result.products as any).map((p: any) => ({
+        id: p.id, code: p.code, name: p.name, brand: p.brand, unit: p.unit, minStock: p.minStock, maxStock: p.maxStock,
+        purchasePrice: p.purchasePrice, salePrice: p.salePrice, totalStock: p.totalStock, isLowStock: p.isLowStock
+      }));
+      sendCsv(res, 'productos.csv', headers, rows);
+    } catch (error) {
+      console.error('Error export products:', error);
+      res.status(500).json({ message: 'Failed to export products' });
+    }
+  });
+
+  app.get('/api/export/inventory', isAuthenticated, async (_req, res) => {
+    try {
+      const low = await storage.getLowStockProducts();
+      const headers = ['productCode','productName','warehouseName','currentStock','minStock'];
+      const rows = low.map((r: any) => ({
+        productCode: r.product.code,
+        productName: r.product.name,
+        warehouseName: r.warehouse.name,
+        currentStock: r.currentStock,
+        minStock: r.minStock
+      }));
+      sendCsv(res, 'inventario_bajo_stock.csv', headers, rows);
+    } catch (error) {
+      console.error('Error export inventory:', error);
+      res.status(500).json({ message: 'Failed to export inventory' });
+    }
+  });
+
+  app.get('/api/export/movements', isAuthenticated, async (req, res) => {
+    try {
+      const limit = 50_000;
+      const { from, to, productId, type } = req.query as any;
+      const opts: any = {};
+      if (from) opts.from = new Date(from);
+      if (to) opts.to = new Date(to);
+      if (productId) opts.productId = productId;
+      if (type) opts.type = type;
+      const result = await storage.getMovements(limit, 0, opts);
+      const headers = ['id','productCode','productName','type','quantity','sourceWarehouse','destinationWarehouse','user','createdAt'];
+      const rows = result.movements.map((m: any) => ({
+        id: m.movement.id,
+        productCode: m.product.code,
+        productName: m.product.name,
+        type: m.movement.type,
+        quantity: m.movement.quantity,
+        sourceWarehouse: m.sourceWarehouse?.name || '',
+        destinationWarehouse: m.destinationWarehouse?.name || '',
+        user: (m.user?.firstName || '') + ' ' + (m.user?.lastName || ''),
+        createdAt: m.movement.createdAt.toISOString()
+      }));
+      sendCsv(res, 'movimientos.csv', headers, rows);
+    } catch (error) {
+      console.error('Error export movements:', error);
+      res.status(500).json({ message: 'Failed to export movements' });
+    }
+  });
+
   // Supplier routes
   app.get('/api/suppliers', isAuthenticated, async (req, res) => {
     try {
@@ -72,7 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/suppliers/:id', isAuthenticated, async (req, res) => {
     try {
       const supplier = await storage.getSupplier(req.params.id);
-      if (!supplier) {
+      if (!supplier || supplier.isActive === false) {
         return res.status(404).json({ message: "Supplier not found" });
       }
       res.json(supplier);
@@ -85,8 +202,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/suppliers', isAuthenticated, async (req: any, res) => {
     try {
       // Check if user has permission to create suppliers
-      const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
+  const userId = extractUserId(req);
+  const user = userId ? await storage.getUser(userId) : undefined;
+  if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -101,8 +219,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/suppliers/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
+  const userId = extractUserId(req);
+  const user = userId ? await storage.getUser(userId) : undefined;
+  if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -117,8 +236,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/suppliers/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !user.role || user.role !== 'administrator') {
+  const userId = extractUserId(req);
+  const user = userId ? await storage.getUser(userId) : undefined;
+  if (!user || !user.role || user.role !== 'administrator') {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -144,7 +264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/warehouses/:id', isAuthenticated, async (req, res) => {
     try {
       const warehouse = await storage.getWarehouse(req.params.id);
-      if (!warehouse) {
+      if (!warehouse || warehouse.isActive === false) {
         return res.status(404).json({ message: "Warehouse not found" });
       }
       res.json(warehouse);
@@ -156,8 +276,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/warehouses', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
+  const userId = extractUserId(req);
+  const user = userId ? await storage.getUser(userId) : undefined;
+  if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -172,8 +293,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/warehouses/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
+  const userId = extractUserId(req);
+  const user = userId ? await storage.getUser(userId) : undefined;
+  if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -188,8 +310,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/warehouses/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !user.role || user.role !== 'administrator') {
+  const userId = extractUserId(req);
+  const user = userId ? await storage.getUser(userId) : undefined;
+  if (!user || !user.role || user.role !== 'administrator') {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -214,8 +337,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/categories', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
+  const userId = extractUserId(req);
+  const user = userId ? await storage.getUser(userId) : undefined;
+  if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -234,8 +358,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
       const search = req.query.search as string;
+      const categoryId = req.query.categoryId as string;
+      const supplierId = req.query.supplierId as string;
+      const lowStockOnly = req.query.lowStockOnly === 'true';
       
-      const result = await storage.getProducts(limit, offset, search);
+      const result = await storage.getProducts(limit, offset, search, categoryId, supplierId, lowStockOnly);
       res.json(result);
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -256,14 +383,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/products/:id/movement-summary', isAuthenticated, async (req, res) => {
+    try {
+      const summary = await storage.getProductMovementSummary(req.params.id);
+      res.json(summary);
+    } catch (error) {
+      console.error('Error fetching product movement summary:', error);
+      res.status(500).json({ message: 'Failed to fetch product movement summary' });
+    }
+  });
+
   app.post('/api/products', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const userId = extractUserId(req);
+      const user = userId ? await storage.getUser(userId) : undefined;
       if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
-
-      const validatedData = insertProductSchema.parse(req.body);
+  // Separate known columns vs extended fields → put extras into metadata json
+  const { code, name, description, categoryId, brand, unit, purchasePrice, salePrice, minStock, maxStock, supplierId, barcode, attachmentUrl, ...rest } = req.body || {};
+  const payload = { code, name, description, categoryId, brand, unit, purchasePrice, salePrice, minStock, maxStock, supplierId, barcode, attachmentUrl, metadata: Object.keys(rest).length ? rest : undefined };
+  const validatedData = insertProductSchema.parse(payload);
       const product = await storage.createProduct(validatedData);
       res.status(201).json(product);
     } catch (error) {
@@ -274,12 +414,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/products/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const userId = extractUserId(req);
+      const user = userId ? await storage.getUser(userId) : undefined;
       if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
-
-      const validatedData = insertProductSchema.partial().parse(req.body);
+  const { code, name, description, categoryId, brand, unit, purchasePrice, salePrice, minStock, maxStock, supplierId, barcode, attachmentUrl, ...rest } = req.body || {};
+  const payload: any = { code, name, description, categoryId, brand, unit, purchasePrice, salePrice, minStock, maxStock, supplierId, barcode, attachmentUrl };
+  if (Object.keys(rest).length) payload.metadata = rest;
+  const validatedData = insertProductSchema.partial().parse(payload);
       const product = await storage.updateProduct(req.params.id, validatedData);
       res.json(product);
     } catch (error) {
@@ -290,7 +433,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/products/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const userId = extractUserId(req);
+      const user = userId ? await storage.getUser(userId) : undefined;
       if (!user || !user.role || user.role !== 'administrator') {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
@@ -334,9 +478,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
+      const userId = extractUserId(req);
+      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
       const validatedData = insertMovementSchema.parse({
         ...req.body,
-        userId: req.user.claims.sub,
+        userId,
       });
       
       const movement = await storage.createMovement(validatedData);
@@ -365,6 +511,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching product inventory:", error);
       res.status(500).json({ message: "Failed to fetch product inventory" });
+    }
+  });
+
+  // Inventory overview endpoint (returns product + warehouse + quantity)
+  // Public inventory endpoint (read-only)
+  app.get('/api/inventory', async (req, res) => {
+    try {
+      if (!pool) return res.status(500).json({ message: 'DB not configured' });
+      const client = await pool.connect();
+      try {
+        // Try Spanish schema first
+        const spanishCheck = await client.query("SELECT to_regclass('public.inventario') IS NOT NULL as exists");
+        if (spanishCheck.rows[0].exists) {
+          const q = `SELECT p.codigo as product_code, p.nombre as product_name, b.nombre as warehouse_name, i.cantidad_actual as quantity
+            FROM inventario i
+            JOIN productos p ON p.id = i.producto_id
+            JOIN bodegas b ON b.id = i.bodega_id
+            ORDER BY p.codigo`;
+          const r = await client.query(q);
+          return res.json(r.rows);
+        }
+
+        // Fallback to English schema
+        const engCheck = await client.query("SELECT to_regclass('public.inventory') IS NOT NULL as exists");
+        if (engCheck.rows[0].exists) {
+          const q = `SELECT p.code as product_code, p.name as product_name, w.name as warehouse_name, i.current_stock as quantity
+            FROM inventory i
+            JOIN products p ON p.id = i.product_id
+            JOIN warehouses w ON w.id = i.warehouse_id
+            ORDER BY p.code`;
+          const r = await client.query(q);
+          return res.json(r.rows);
+        }
+
+        // As last resort, return movements as fallback
+        const movements = await storage.getRecentMovements(100);
+        return res.json(movements);
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Error fetching inventory:', error);
+      res.status(500).json({ message: 'Failed to fetch inventory' });
+    }
+  });
+
+  // Upload endpoint for product attachments
+  const uploadsDir = path.resolve(__dirname, '..', 'uploads');
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+  const storageMulter = multer({ dest: uploadsDir });
+
+  app.post('/api/uploads', isAuthenticated, storageMulter.single('file'), async (req: any, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+      const filename = req.file.filename; // multer assigned filename
+      const url = `/uploads/${filename}`;
+      res.status(201).json({ url, filename });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ message: 'Failed to upload file' });
+    }
+  });
+
+  // Spanish alias
+  app.get('/api/inventario', isAuthenticated, async (req, res) => {
+    return app._router.handle(req, res, () => {}, '/api/inventory');
+  });
+
+  app.get('/api/inventario/producto/:productId', isAuthenticated, async (req, res) => {
+    try {
+      const inventory = await storage.getInventoryByProduct(req.params.productId);
+      res.json(inventory);
+    } catch (error) {
+      console.error('Error fetching inventario producto:', error);
+      res.status(500).json({ message: 'Failed to fetch inventario producto' });
     }
   });
 

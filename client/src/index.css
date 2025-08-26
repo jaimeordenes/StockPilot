@@ -121,8 +121,10 @@
 }
 
 @layer base {
-  * {
-    @apply border-border;
+  /* Evita error de Tailwind si la clase 'border-border' no está definida
+     Reemplazamos por una regla básica y segura */
+  *, *::before, *::after {
+    box-sizing: border-box;
   }
 
   body {

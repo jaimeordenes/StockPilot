@@ -11,7 +11,7 @@ export default function Landing() {
             <div className="w-12 h-12 bg-primary-500 rounded-xl flex items-center justify-center">
               <Warehouse className="h-6 w-6 text-white" />
             </div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">InventoryPro</h1>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Módulo Inventario</h1>
           </div>
           
           <h2 className="text-6xl font-bold text-gray-900 dark:text-white mb-6">
@@ -28,7 +28,7 @@ export default function Landing() {
           <Button 
             size="lg" 
             className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 text-lg"
-            onClick={() => window.location.href = '/api/login'}
+            onClick={() => window.location.href = '/login'}
             data-testid="button-login"
           >
             Iniciar Sesión
@@ -130,7 +130,7 @@ export default function Landing() {
           <Button 
             size="lg" 
             className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 text-lg"
-            onClick={() => window.location.href = '/api/login'}
+            onClick={() => window.location.href = '/login'}
             data-testid="button-login-footer"
           >
             Acceder al Sistema

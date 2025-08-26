@@ -13,6 +13,7 @@ import {
   X 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { apiRequest } from "@/lib/queryClient";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -35,20 +36,26 @@ export default function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
 
-  const handleLogout = () => {
-    window.location.href = '/api/logout';
+  const handleLogout = async () => {
+    try {
+      await apiRequest('POST', '/api/auth/logout');
+    } catch (e) {
+      // ignore
+    }
+    window.location.href = '/login';
   };
 
   const getUserInitials = (user: any) => {
     if (!user) return 'U';
-    const firstName = user.firstName || '';
-    const lastName = user.lastName || '';
-    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'U';
+    const name = user.nombre || user.firstName || '';
+    const parts = (name || '').split(/\s+/);
+    const initials = (parts[0]?.charAt(0) || '') + (parts[1]?.charAt(0) || '');
+    return initials.toUpperCase() || 'U';
   };
 
   const getUserDisplayName = (user: any) => {
     if (!user) return 'Usuario';
-    return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Usuario';
+    return user.nombre || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.correo || user.email || 'Usuario';
   };
 
   const getRoleDisplayName = (role: string) => {
@@ -84,7 +91,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
             <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
               <Warehouse className="h-5 w-5 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">InventoryPro</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Módulo Inventario</h1>
           </div>
           {isMobile && (
             <Button

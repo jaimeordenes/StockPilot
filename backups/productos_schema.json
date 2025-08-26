@@ -1,0 +1,77 @@
+[
+  {
+    "column_name": "id",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  },
+  {
+    "column_name": "codigo",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "column_name": "nombre",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "column_name": "categoria",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "descripcion",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "unidad",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "precio_compra",
+    "data_type": "numeric",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "precio_venta",
+    "data_type": "numeric",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "stock_min",
+    "data_type": "integer",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "stock_max",
+    "data_type": "integer",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "proveedor_id",
+    "data_type": "integer",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "fecha_caducidad",
+    "data_type": "date",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "lote",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "serie",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "attachment_url",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  }
+]

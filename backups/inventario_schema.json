@@ -1,0 +1,22 @@
+[
+  {
+    "column_name": "id",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  },
+  {
+    "column_name": "producto_id",
+    "data_type": "integer",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "bodega_id",
+    "data_type": "integer",
+    "is_nullable": "YES"
+  },
+  {
+    "column_name": "cantidad_actual",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  }
+]

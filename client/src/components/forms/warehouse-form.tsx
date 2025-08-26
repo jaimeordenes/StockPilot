@@ -28,12 +28,14 @@ export default function WarehouseForm({ warehouse, users, onSubmit, isLoading }:
       name: warehouse?.name || "",
       location: warehouse?.location || "",
       capacity: warehouse?.capacity || undefined,
-      managerId: warehouse?.managerId || "",
+      managerId: warehouse?.managerId || "__none__",
     },
   });
 
   const handleSubmit = (data: WarehouseFormData) => {
-    onSubmit(data);
+    const payload: any = { ...data };
+    if (payload.managerId === '__none__') payload.managerId = '';
+    onSubmit(payload as WarehouseFormData);
   };
 
   return (
@@ -99,7 +101,7 @@ export default function WarehouseForm({ warehouse, users, onSubmit, isLoading }:
                     <SelectValue placeholder="Seleccionar responsable" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sin responsable</SelectItem>
+                    <SelectItem value="__none__">Sin responsable</SelectItem>
                     {users.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.firstName} {user.lastName} ({user.email})

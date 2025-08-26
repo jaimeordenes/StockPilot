@@ -1,6 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { fileURLToPath } from 'url';
+import path from 'path';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.use(express.json());
@@ -36,36 +39,53 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
+export async function startServer(opts?: { port?: number; host?: string }) {
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
+    // Log detallado del error del middleware
+    console.error('[error-middleware]', status, message, err?.stack);
+    if (!res.headersSent) {
+      try { res.status(status).json({ message }); } catch (_) {}
+    }
+    // No relanzar para evitar caída completa del proceso en dev.
   });
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
+  const skipVite = process.env.SKIP_VITE === '1';
+  if (app.get("env") === "development" && !skipVite) {
+    console.log('[startup] environment=development (SKIP_VITE=0) -> inicializando Vite middleware');
+    try {
+      await setupVite(app, server);
+      console.log('[startup] Vite middleware listo');
+    } catch (e) {
+      console.error('[startup] fallo al inicializar Vite, continuando sin frontend integrado:', (e as Error).message);
+    }
   } else {
-    serveStatic(app);
+    console.log(`[startup] modo estático (env=${app.get('env')} skipVite=${skipVite}) -> sirviendo build si existe`);
+    try { serveStatic(app); } catch (e) { console.warn('[startup] no se pudieron servir estáticos:', (e as Error).message); }
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  const port = opts?.port ?? parseInt(process.env.PORT || '5000', 10);
+  const host = opts?.host ?? (process.env.HOST || "127.0.0.1");
+  server.listen(port, host, () => {
+    log(`serving on ${host}:${port} (env=${app.get('env')})`);
   });
-})();
+
+  return server;
+}
+
+// ESM equivalent to Python's `if __name__ == "__main__":`
+const thisFilePath = fileURLToPath(import.meta.url);
+if (process.argv && process.argv[1] && thisFilePath === process.argv[1]) {
+  startServer().catch((err) => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+}
+
+export { app };

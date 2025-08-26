@@ -22,7 +22,7 @@ export default function MovementsTable() {
   const [page, setPage] = useState(0);
   const limit = 20;
 
-  const { data: movementsData, isLoading } = useQuery({
+  const { data: movementsData, isLoading } = useQuery<any>({
     queryKey: ["/api/movements", { limit, offset: page * limit }],
     retry: false,
   });

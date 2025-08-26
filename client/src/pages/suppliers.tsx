@@ -22,14 +22,14 @@ export default function Suppliers() {
 
   // Redirect to home if not authenticated
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+  if (!authLoading && !isAuthenticated) {
       toast({
         title: "No autorizado",
         description: "Redirigiendo al inicio de sesión...",
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/api/login";
+    window.location.href = "/login";
       }, 500);
       return;
     }

@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import useRequireAuth from "@/hooks/useRequireAuth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
+import { invalidateInventoryRelated } from "@/lib/invalidate";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,22 +18,11 @@ export default function Movements() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { ready } = useRequireAuth();
   const queryClient = useQueryClient();
 
   // Redirect to home if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      toast({
-        title: "No autorizado",
-        description: "Redirigiendo al inicio de sesión...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, authLoading, toast]);
+  // Redirección centralizada en useRequireAuth
 
   const { data: products } = useQuery({
     queryKey: ["/api/products"],
@@ -43,35 +34,42 @@ export default function Movements() {
     retry: false,
   });
 
+  const { data: todayCounts } = useQuery({
+    queryKey: ["/api/dashboard/movements-today"],
+    retry: false,
+    refetchInterval: 60_000, // refresco cada minuto
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data: MovementFormData) => {
       await apiRequest("POST", "/api/movements", data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/movements"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    onMutate: async (data: MovementFormData) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/movements"] });
+      const prev = queryClient.getQueryData<any>(["/api/movements"]);
+      if (prev) {
+        const optimistic = { ...prev };
+        const fakeId = 'opt-mov-' + Date.now();
+        optimistic.movements = [{ movement: { id: fakeId, type: data.type, quantity: data.quantity, createdAt: new Date().toISOString() }, product: { code: data.productId, name: (products as any)?.products?.find((p: any) => p.id === data.productId)?.name || 'Producto', }, sourceWarehouse: null, destinationWarehouse: null, user: { firstName: 'Tú', lastName: '' } }, ...optimistic.movements];
+        queryClient.setQueryData(["/api/movements"], optimistic);
+        return { prev };
+      }
+      return { prev: null };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(["/api/movements"], ctx.prev);
+      toast({
+        title: 'Error',
+        description: 'No se pudo registrar el movimiento',
+        variant: 'destructive'
+      });
+    },
+    onSettled: () => {
+      invalidateInventoryRelated(queryClient);
       setIsFormOpen(false);
       toast({
         title: "Movimiento registrado",
         description: "El movimiento ha sido registrado exitosamente.",
-      });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "No autorizado",
-          description: "Redirigiendo al inicio de sesión...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "No se pudo registrar el movimiento.",
-        variant: "destructive",
       });
     },
   });
@@ -86,7 +84,7 @@ export default function Movements() {
 
   const canWrite = (user as any)?.role === 'administrator' || (user as any)?.role === 'operator';
 
-  if (authLoading || !isAuthenticated) {
+  if (authLoading || !ready) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="flex items-center space-x-2">
@@ -136,67 +134,45 @@ export default function Movements() {
                 />
               </DialogContent>
             </Dialog>
+            <Button
+              variant="outline"
+              className="ml-2"
+              onClick={() => {
+                const url = '/api/export/movements';
+                window.open(url, '_blank');
+              }}
+              data-testid="button-export-movements"
+            >Exportar CSV</Button>
           </div>
         )}
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-success-100 dark:bg-success-900 rounded-md flex items-center justify-center mr-3">
-                <ArrowLeftRight className="h-4 w-4 text-success-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Entradas Hoy</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">-</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-red-100 dark:bg-red-900 rounded-md flex items-center justify-center mr-3">
-                <ArrowLeftRight className="h-4 w-4 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Salidas Hoy</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">-</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-md flex items-center justify-center mr-3">
-                <ArrowLeftRight className="h-4 w-4 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Transferencias</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">-</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-md flex items-center justify-center mr-3">
-                <ArrowLeftRight className="h-4 w-4 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Hoy</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">-</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        {useMemo(() => {
+          const items = [
+            { key: 'entry', label: 'Entradas Hoy', value: (todayCounts as any)?.entry, styles: 'bg-green-100 dark:bg-green-900 text-green-600' },
+            { key: 'exit', label: 'Salidas Hoy', value: (todayCounts as any)?.exit, styles: 'bg-rose-100 dark:bg-rose-900 text-rose-600' },
+            { key: 'transfer', label: 'Transferencias', value: (todayCounts as any)?.transfer, styles: 'bg-blue-100 dark:bg-blue-900 text-blue-600' },
+            { key: 'adjustment', label: 'Ajustes', value: (todayCounts as any)?.adjustment, styles: 'bg-amber-100 dark:bg-amber-900 text-amber-600' },
+            { key: 'total', label: 'Total Hoy', value: (todayCounts as any)?.total, styles: 'bg-violet-100 dark:bg-violet-900 text-violet-600' },
+          ];
+          return items.map(stat => (
+            <Card key={stat.key}>
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className={`w-8 h-8 rounded-md flex items-center justify-center mr-3 ${stat.styles.split(' ').filter(c=>c.startsWith('bg-')).join(' ')}`}> 
+                    <ArrowLeftRight className={`h-4 w-4 ${stat.styles.split(' ').filter(c=>c.startsWith('text-')).join(' ')}`} aria-label={stat.label} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{stat.label}</p>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-white">{stat.value ?? <span className="opacity-40">-</span>}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ));
+        }, [todayCounts])}
       </div>
 
       {/* Movements table */}

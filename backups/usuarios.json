@@ -1,0 +1,14 @@
+{
+  "table": "usuarios",
+  "rowCount": 1,
+  "rows": [
+    {
+      "id": 1,
+      "nombre": "jordenes",
+      "correo": "jordenes@example.com",
+      "contrasena_hash": "$2b$10$grW/0wsxpmBMGH5QLMWnNeaiy4Rpn/lHECvIyBzei.rZKEjSpO0P2",
+      "rol": "administrator",
+      "estado": true
+    }
+  ]
+}
