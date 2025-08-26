@@ -167,7 +167,7 @@ export default function Warehouses() {
     setIsFormOpen(true);
   };
 
-  const canWrite = user?.role === 'administrator' || user?.role === 'operator';
+  const canWrite = (user as any)?.role === 'administrator' || (user as any)?.role === 'operator';
 
   if (authLoading || !isAuthenticated) {
     return (
@@ -215,7 +215,7 @@ export default function Warehouses() {
                 </DialogHeader>
                 <WarehouseForm
                   warehouse={editingWarehouse}
-                  users={users || []}
+                  users={(users as any) || []}
                   onSubmit={editingWarehouse ? handleUpdate : handleCreate}
                   isLoading={createMutation.isPending || updateMutation.isPending}
                 />
@@ -253,9 +253,9 @@ export default function Warehouses() {
             </Card>
           ))}
         </div>
-      ) : warehouses?.length > 0 ? (
+      ) : (warehouses as any)?.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {warehouses.map((warehouse: Warehouse) => (
+          {(warehouses as any).map((warehouse: Warehouse) => (
             <Card key={warehouse.id} className="hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
@@ -282,7 +282,7 @@ export default function Warehouses() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      {user?.role === 'administrator' && (
+                      {(user as any)?.role === 'administrator' && (
                         <Button
                           variant="ghost"
                           size="sm"

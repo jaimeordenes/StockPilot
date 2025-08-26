@@ -177,7 +177,7 @@ export default function Products() {
     setIsFormOpen(true);
   };
 
-  const canWrite = user?.role === 'administrator' || user?.role === 'operator';
+  const canWrite = (user as any)?.role === 'administrator' || (user as any)?.role === 'operator';
 
   if (authLoading || !isAuthenticated) {
     return (
@@ -225,8 +225,8 @@ export default function Products() {
                 </DialogHeader>
                 <ProductForm
                   product={editingProduct}
-                  categories={categories || []}
-                  suppliers={suppliers || []}
+                  categories={(categories as any) || []}
+                  suppliers={(suppliers as any) || []}
                   onSubmit={editingProduct ? handleUpdate : handleCreate}
                   isLoading={createMutation.isPending || updateMutation.isPending}
                 />
@@ -279,10 +279,10 @@ export default function Products() {
             </Card>
           ))}
         </div>
-      ) : productsData?.products?.length > 0 ? (
+      ) : (productsData as any)?.products?.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-            {productsData.products.map((product: Product) => (
+            {(productsData as any).products.map((product: Product) => (
               <Card key={product.id} className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
@@ -317,7 +317,7 @@ export default function Products() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          {user?.role === 'administrator' && (
+                          {(user as any)?.role === 'administrator' && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -372,7 +372,7 @@ export default function Products() {
           {/* Pagination */}
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-500 dark:text-gray-400">
-              Mostrando {page * limit + 1} a {Math.min((page + 1) * limit, productsData.total)} de {productsData.total} productos
+              Mostrando {page * limit + 1} a {Math.min((page + 1) * limit, (productsData as any).total)} de {(productsData as any).total} productos
             </div>
             <div className="flex space-x-2">
               <Button
@@ -388,7 +388,7 @@ export default function Products() {
                 variant="outline"
                 size="sm"
                 onClick={() => setPage(page + 1)}
-                disabled={(page + 1) * limit >= productsData.total}
+                disabled={(page + 1) * limit >= (productsData as any).total}
                 data-testid="button-next-page"
               >
                 Siguiente

@@ -1,3 +1,21 @@
+// Re-export types from shared schema for easier frontend imports
+export type {
+  User,
+  UpsertUser,
+  Supplier,
+  InsertSupplier,
+  Warehouse,
+  InsertWarehouse,
+  Category,
+  InsertCategory,
+  Product,
+  InsertProduct,
+  Inventory,
+  InsertInventory,
+  Movement,
+  InsertMovement,
+} from "@shared/schema";
+
 export interface DashboardStats {
   totalProducts: number;
   lowStockItems: number;

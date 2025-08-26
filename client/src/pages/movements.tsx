@@ -84,7 +84,7 @@ export default function Movements() {
     setIsFormOpen(true);
   };
 
-  const canWrite = user?.role === 'administrator' || user?.role === 'operator';
+  const canWrite = (user as any)?.role === 'administrator' || (user as any)?.role === 'operator';
 
   if (authLoading || !isAuthenticated) {
     return (
@@ -129,8 +129,8 @@ export default function Movements() {
                   <DialogTitle>Registrar Movimiento</DialogTitle>
                 </DialogHeader>
                 <MovementForm
-                  products={products?.products || []}
-                  warehouses={warehouses || []}
+                  products={(products as any)?.products || []}
+                  warehouses={(warehouses as any) || []}
                   onSubmit={handleCreate}
                   isLoading={createMutation.isPending}
                 />

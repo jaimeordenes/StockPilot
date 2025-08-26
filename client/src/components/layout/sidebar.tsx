@@ -111,7 +111,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
                 {getUserDisplayName(user)}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400" data-testid="text-user-role">
-                {user?.role ? getRoleDisplayName(user.role) : 'Usuario'}
+                {(user as any)?.role ? getRoleDisplayName((user as any).role) : 'Usuario'}
               </p>
             </div>
           </div>

@@ -162,7 +162,7 @@ export default function Suppliers() {
     setIsFormOpen(true);
   };
 
-  const canWrite = user?.role === 'administrator' || user?.role === 'operator';
+  const canWrite = (user as any)?.role === 'administrator' || (user as any)?.role === 'operator';
 
   if (authLoading || !isAuthenticated) {
     return (
@@ -247,9 +247,9 @@ export default function Suppliers() {
             </Card>
           ))}
         </div>
-      ) : suppliers?.length > 0 ? (
+      ) : (suppliers as any)?.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {suppliers.map((supplier: Supplier) => (
+          {(suppliers as any).map((supplier: Supplier) => (
             <Card key={supplier.id} className="hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
@@ -276,7 +276,7 @@ export default function Suppliers() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      {user?.role === 'administrator' && (
+                      {(user as any)?.role === 'administrator' && (
                         <Button
                           variant="ghost"
                           size="sm"

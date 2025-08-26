@@ -1,0 +1,223 @@
+Prompt Mejorado: Sistema de Inventario y Control de Bodega
+
+Quiero que crees un sistema web profesional de inventario y control de bodega, similar a ZapERP, con backend, frontend y base de datos, siguiendo las siguientes especificaciones:
+
+1. Tecnologías principales
+
+Backend: Node.js con Express (API REST).
+
+Frontend: React con TailwindCSS (interfaz moderna y responsiva).
+
+Base de datos: PostgreSQL o MySQL.
+
+ORM recomendado: Prisma o Sequelize.
+
+Autenticación y seguridad: JWT + bcrypt para contraseñas + verificación en dos pasos (2FA opcional).
+
+Servidor de correo: Gmail SMTP para notificaciones.
+
+Documentación de API: Swagger o Redoc.
+
+2. Funcionalidades principales
+🔑 Módulo de autenticación y usuarios
+
+Registro y gestión de usuarios (solo administradores pueden crear usuarios).
+
+Roles y permisos personalizables:
+
+Administrador
+
+Operador
+
+Consulta
+
+Login seguro con correo/usuario y contraseña.
+
+Recuperación de contraseña con token temporal.
+
+Configuración de políticas de contraseñas.
+
+📦 Módulo de productos
+
+CRUD completo de productos.
+
+Atributos: código, nombre, categoría, marca, descripción, unidad de medida, precio de compra, precio de venta, stock mínimo, stock máximo, proveedor.
+
+Soporte para códigos de barra y QR.
+
+Variantes de productos (tallas, colores, lotes).
+
+Gestión de productos con número de serie.
+
+Control de fechas de caducidad y alertas.
+
+🏬 Módulo de bodegas
+
+Gestión de múltiples bodegas o sucursales.
+
+Configuración de ubicación, capacidad y responsable.
+
+Asignar productos a bodegas.
+
+Control de inventario por bodega y ubicación interna (ejemplo: pasillo/estante).
+
+🔄 Módulo de movimientos
+
+Entrada de productos (compras, devoluciones, ajustes positivos).
+
+Salida de productos (ventas, consumo interno, ajustes negativos).
+
+Transferencia de productos entre bodegas.
+
+Registro detallado con fecha, hora, usuario, motivo y documento asociado.
+
+Validación automática contra stock disponible.
+
+📊 Módulo de reportes y dashboard
+
+Dashboard con gráficas:
+
+Entradas y salidas por mes.
+
+Estado de stock total.
+
+Productos más vendidos / más usados.
+
+Alertas de stock bajo enviadas automáticamente por correo.
+
+👥 Módulo de proveedores y clientes
+
+Registro de proveedores: nombre, RUT, contacto, teléfono, correo, dirección.
+
+Registro de clientes: datos de contacto, historial de compras.
+
+Asociación de productos a proveedores preferentes.
+
+3. Configurador del sistema (Módulo de configuración)
+
+El sistema debe contar con un módulo de configuración central que permita:
+
+Definir moneda por defecto y tipo de cambio.
+
+Configurar impuestos (IVA, retenciones, exenciones).
+
+Definir unidades de medida personalizadas.
+
+Configurar políticas de stock mínimo y máximo.
+
+Definir flujos de aprobación para movimientos (ejemplo: supervisor debe aprobar una transferencia).
+
+Gestión de notificaciones: correo, SMS, panel de alertas.
+
+Parámetros de facturación y conexión con sistemas externos (API de facturación electrónica, ERP).
+
+Configuración de dashboard (widgets personalizables por usuario).
+
+Multi-idioma (español/inglés).
+
+Importación y exportación masiva (CSV, Excel).
+
+4. Reportes disponibles
+
+El sistema debe generar reportes en PDF, Excel y en pantalla.
+Reportes principales:
+
+Inventario:
+
+Stock por producto y bodega.
+
+Stock valorizado (precio costo y precio venta).
+
+Inventario histórico con auditoría de cambios.
+
+Movimientos:
+
+Entradas por rango de fechas.
+
+Salidas por rango de fechas.
+
+Transferencias entre bodegas.
+
+Ajustes de stock (positivos/negativos).
+
+Productos:
+
+Productos con stock bajo mínimo.
+
+Productos próximos a vencer.
+
+Ranking de productos más vendidos o consumidos.
+
+Proveedores:
+
+Compras por proveedor.
+
+Historial de precios de compra.
+
+Productos más abastecidos por proveedor.
+
+Clientes:
+
+Ventas por cliente.
+
+Ranking de clientes por compras.
+
+Usuarios:
+
+Auditoría de movimientos por usuario.
+
+Actividad en el sistema.
+
+Financieros:
+
+Valor total del inventario.
+
+Márgenes entre compra y venta.
+
+Reporte de costos por bodega.
+
+5. Interfaz de usuario (Frontend)
+
+Dashboard inicial con métricas rápidas.
+
+Menú lateral con accesos a: Inventario, Movimientos, Bodegas, Reportes, Configuración.
+
+Tablas con filtros, búsqueda y paginación.
+
+Formularios con validación en tiempo real.
+
+Notificaciones visuales (ej: toast de éxito/error).
+
+Soporte multiusuario y multi-bodega.
+
+6. Base de datos (ejemplo de tablas)
+
+usuarios (id, nombre, correo, contraseña_hash, rol, estado)
+
+bodegas (id, nombre, ubicación, capacidad, responsable_id)
+
+productos (id, codigo, nombre, categoria, descripcion, unidad, precio_compra, precio_venta, stock_min, stock_max, proveedor_id, fecha_caducidad, lote, serie)
+
+inventario (id, producto_id, bodega_id, cantidad_actual)
+
+movimientos (id, producto_id, bodega_origen, bodega_destino, tipo, cantidad, usuario_id, fecha, motivo, documento_asociado)
+
+proveedores (id, nombre, rut, contacto, telefono, correo, direccion)
+
+clientes (id, nombre, rut, contacto, telefono, correo, direccion)
+
+configuracion (id, parametro, valor, usuario_id)
+
+7. Estilo de desarrollo
+
+Código limpio, comentado y modular.
+
+Arquitectura MVC para backend.
+
+Controladores y servicios separados.
+
+Buenas prácticas de seguridad (SQL Injection, XSS, CSRF).
+
+Documentación en Swagger para la API REST.
+
+Tests unitarios y de integración básicos.

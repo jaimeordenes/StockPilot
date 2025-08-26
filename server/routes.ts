@@ -86,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check if user has permission to create suppliers
       const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !['administrator', 'operator'].includes(user.role)) {
+      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -102,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/suppliers/:id', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !['administrator', 'operator'].includes(user.role)) {
+      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -118,7 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/suppliers/:id', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
-      if (!user || user.role !== 'administrator') {
+      if (!user || !user.role || user.role !== 'administrator') {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -157,7 +157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/warehouses', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !['administrator', 'operator'].includes(user.role)) {
+      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -173,7 +173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/warehouses/:id', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !['administrator', 'operator'].includes(user.role)) {
+      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -189,7 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/warehouses/:id', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
-      if (!user || user.role !== 'administrator') {
+      if (!user || !user.role || user.role !== 'administrator') {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -215,7 +215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/categories', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !['administrator', 'operator'].includes(user.role)) {
+      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -259,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/products', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !['administrator', 'operator'].includes(user.role)) {
+      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -275,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/products/:id', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !['administrator', 'operator'].includes(user.role)) {
+      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -291,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/products/:id', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
-      if (!user || user.role !== 'administrator') {
+      if (!user || !user.role || user.role !== 'administrator') {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
@@ -330,7 +330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/movements', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
-      if (!user || !['administrator', 'operator'].includes(user.role)) {
+      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 

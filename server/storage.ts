@@ -23,6 +23,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, ilike, lt } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -196,17 +197,17 @@ export class DatabaseStorage implements IStorage {
 
   // Product operations
   async getProducts(limit = 50, offset = 0, search?: string): Promise<{ products: Product[]; total: number }> {
-    let query = db.select().from(products).where(eq(products.isActive, true));
+    const baseCondition = eq(products.isActive, true);
+    const searchCondition = search 
+      ? sql`${products.name} ILIKE ${`%${search}%`} OR ${products.code} ILIKE ${`%${search}%`}`
+      : sql`true`;
     
-    if (search) {
-      query = query.where(
-        sql`${products.name} ILIKE ${`%${search}%`} OR ${products.code} ILIKE ${`%${search}%`}`
-      );
-    }
+    const finalCondition = search ? and(baseCondition, searchCondition) : baseCondition;
     
     const [productsResult, [{ count }]] = await Promise.all([
-      query.limit(limit).offset(offset).orderBy(asc(products.name)),
-      db.select({ count: sql<number>`count(*)` }).from(products).where(eq(products.isActive, true))
+      db.select().from(products).where(finalCondition)
+        .limit(limit).offset(offset).orderBy(asc(products.name)),
+      db.select({ count: sql<number>`count(*)` }).from(products).where(finalCondition)
     ]);
 
     return { products: productsResult, total: count };
@@ -484,18 +485,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRecentMovements(limit = 10): Promise<any[]> {
+    const sourceWarehouses = alias(warehouses, 'sourceWarehouses');
+    const destinationWarehouses = alias(warehouses, 'destinationWarehouses');
+    
     return await db
       .select({
         movement: movements,
         product: products,
-        sourceWarehouse: warehouses,
-        destinationWarehouse: warehouses,
+        sourceWarehouse: sourceWarehouses,
+        destinationWarehouse: destinationWarehouses,
         user: users,
       })
       .from(movements)
       .innerJoin(products, eq(movements.productId, products.id))
-      .leftJoin(warehouses, eq(movements.sourceWarehouseId, warehouses.id))
-      .leftJoin(warehouses, eq(movements.destinationWarehouseId, warehouses.id))
+      .leftJoin(sourceWarehouses, eq(movements.sourceWarehouseId, sourceWarehouses.id))
+      .leftJoin(destinationWarehouses, eq(movements.destinationWarehouseId, destinationWarehouses.id))
       .innerJoin(users, eq(movements.userId, users.id))
       .limit(limit)
       .orderBy(desc(movements.createdAt));
