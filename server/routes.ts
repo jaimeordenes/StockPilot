@@ -493,6 +493,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
   const limit = parseInt(req.query.limit as string) || 50;
   const offset = parseInt(req.query.offset as string) || 0;
+  // Log access for audit endpoint: timestamp, product, user, pagination and remote info
+  const callerUserId = extractUserId(req) || null;
+  const remoteIp = (req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for'] || '').toString();
+  console.log(`[audit] ${new Date().toISOString()} productId=${req.params.id} userId=${callerUserId} ip=${remoteIp} limit=${limit} offset=${offset} ua=${req.get('user-agent') || ''}`);
   const events = await storage.getProductDeactivations(req.params.id, limit, offset);
   res.json({ events, limit, offset });
     } catch (e) {
