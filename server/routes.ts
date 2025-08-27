@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { pool } from "./db";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { logAudit } from "./logger";
 import { 
   insertSupplierSchema,
   insertWarehouseSchema,
@@ -496,7 +497,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Log access for audit endpoint: timestamp, product, user, pagination and remote info
   const callerUserId = extractUserId(req) || null;
   const remoteIp = (req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for'] || '').toString();
-  console.log(`[audit] ${new Date().toISOString()} productId=${req.params.id} userId=${callerUserId} ip=${remoteIp} limit=${limit} offset=${offset} ua=${req.get('user-agent') || ''}`);
+  try {
+    logAudit({ event: 'product_audit_access', productId: req.params.id, userId: callerUserId, ip: remoteIp, limit, offset, userAgent: req.get('user-agent') || '' });
+  } catch (ee) {
+    console.log('[audit] fallback log', ee);
+  }
   const events = await storage.getProductDeactivations(req.params.id, limit, offset);
   res.json({ events, limit, offset });
     } catch (e) {
