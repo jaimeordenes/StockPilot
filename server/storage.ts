@@ -6,6 +6,7 @@ import {
   products,
   inventory,
   movements,
+  productDeactivations,
   type User,
   type UpsertUser,
   type Supplier,
@@ -62,7 +63,9 @@ export interface IStorage {
   getProductMovementSummary(productId: string): Promise<any[]>;
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product>;
-  deleteProduct(id: string): Promise<void>;
+  deleteProduct(id: string, opts?: { userId?: string; reason?: string }): Promise<void>;
+  reactivateProduct(id: string, opts?: { userId?: string; reason?: string }): Promise<Product>;
+  getProductDeactivations(productId: string): Promise<any[]>;
   getProductsBySupplier(supplierId: string): Promise<Product[]>;
   getLowStockProducts(): Promise<any[]>;
   
@@ -310,8 +313,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
-    const [newProduct] = await db.insert(products).values(product).returning();
-    return newProduct;
+    try {
+      const [newProduct] = await db.insert(products).values(product).returning();
+      return newProduct;
+    } catch (e: any) {
+      console.error('[storage][createProduct] error code=', e?.code, 'detail=', e?.detail || e?.message);
+      throw e;
+    }
   }
 
   async updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product> {
@@ -323,8 +331,25 @@ export class DatabaseStorage implements IStorage {
     return updatedProduct;
   }
 
-  async deleteProduct(id: string): Promise<void> {
-    await db.update(products).set({ isActive: false }).where(eq(products.id, id));
+  async deleteProduct(id: string, opts?: { userId?: string; reason?: string }): Promise<void> {
+    await db.update(products).set({ isActive: false, updatedAt: new Date() }).where(eq(products.id, id));
+    // registrar auditoría con user y reason si vienen
+    try {
+      await db.insert(productDeactivations).values({ productId: id, action: 'deactivate', userId: opts?.userId ?? null, reason: opts?.reason ?? null }).returning();
+    } catch (e) { console.error('[storage] failed to insert product_deactivations', e); }
+  }
+  
+  async reactivateProduct(id: string, opts?: { userId?: string; reason?: string }): Promise<Product> {
+    const [p] = await db.update(products).set({ isActive: true, updatedAt: new Date() }).where(eq(products.id, id)).returning();
+    try {
+      await db.insert(productDeactivations).values({ productId: id, action: 'reactivate', userId: opts?.userId ?? null, reason: opts?.reason ?? null }).returning();
+    } catch (e) { console.error('[storage] failed to insert product_deactivations', e); }
+    return p;
+  }
+
+  async getProductDeactivations(productId: string, limit = 50, offset = 0): Promise<any[]> {
+    const rows = await db.select().from(productDeactivations).where(eq(productDeactivations.productId, productId)).orderBy(desc(productDeactivations.createdAt)).limit(limit).offset(offset);
+    return rows as any[];
   }
 
   async getProductsBySupplier(supplierId: string): Promise<Product[]> {
@@ -598,6 +623,7 @@ class InMemoryStorage implements IStorage {
   warehouses = new Map<string, any>();
   categories = new Map<string, any>();
   products = new Map<string, any>();
+  productDeactivations = new Map<string, any[]>();
   inventory = new Map<string, any>(); // key: `${productId}|${warehouseId}`
   movements = new Map<string, any>();
 
@@ -793,6 +819,18 @@ class InMemoryStorage implements IStorage {
   }
 
   async createProduct(product: any) {
+    // Simular constraint UNIQUE en code si existe campo code
+    if (product?.code) {
+      const existingList = Array.from(this.products.values());
+      for (let i = 0; i < existingList.length; i++) {
+        const existing = existingList[i];
+        if (existing.code && existing.code === product.code) {
+          const err: any = new Error('duplicate product code');
+          err.code = '23505';
+          throw err;
+        }
+      }
+    }
     const id = nanoid();
     const now = new Date();
     const p = { id, ...product, isActive: product.isActive !== false, createdAt: now, updatedAt: now };
@@ -807,13 +845,42 @@ class InMemoryStorage implements IStorage {
     return updated;
   }
 
-  async deleteProduct(id: string) {
+  async deleteProduct(id: string, opts?: { userId?: string; reason?: string }) {
     const p = this.products.get(id);
     if (p) {
       p.isActive = false;
       p.updatedAt = new Date();
+      if (opts?.userId) p.deactivatedBy = opts.userId;
+      if (opts?.reason) p.deactivationReason = opts.reason;
+      p.deactivatedAt = new Date();
       this.products.set(id, p);
+  // store audit event
+  const ev = { id: nanoid(), productId: id, userId: opts?.userId ?? null, action: 'deactivate', reason: opts?.reason ?? null, createdAt: new Date() };
+  const arr = this.productDeactivations.get(id) || [];
+  arr.unshift(ev);
+  this.productDeactivations.set(id, arr);
     }
+  }
+
+  async reactivateProduct(id: string, opts?: { userId?: string; reason?: string }) {
+    const p = this.products.get(id);
+    if (!p) throw new Error('not found');
+    p.isActive = true;
+    p.updatedAt = new Date();
+    if (opts?.userId) p.reactivatedBy = opts.userId;
+    if (opts?.reason) p.reactivationReason = opts.reason;
+    p.reactivatedAt = new Date();
+    this.products.set(id, p);
+  const ev = { id: nanoid(), productId: id, userId: opts?.userId ?? null, action: 'reactivate', reason: opts?.reason ?? null, createdAt: new Date() };
+  const arr = this.productDeactivations.get(id) || [];
+  arr.unshift(ev);
+  this.productDeactivations.set(id, arr);
+    return p;
+  }
+
+  async getProductDeactivations(productId: string, limit = 50, offset = 0) {
+    const arr = this.productDeactivations.get(productId) || [];
+    return arr.slice(offset, offset + limit);
   }
 
   async getProductsBySupplier(supplierId: string) {
@@ -941,5 +1008,7 @@ class InMemoryStorage implements IStorage {
     return result;
   }
 }
+
+export { InMemoryStorage };
 
 export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new InMemoryStorage();

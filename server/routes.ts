@@ -402,12 +402,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
   // Separate known columns vs extended fields → put extras into metadata json
   const { code, name, description, categoryId, brand, unit, purchasePrice, salePrice, minStock, maxStock, supplierId, barcode, attachmentUrl, ...rest } = req.body || {};
-  const payload = { code, name, description, categoryId, brand, unit, purchasePrice, salePrice, minStock, maxStock, supplierId, barcode, attachmentUrl, metadata: Object.keys(rest).length ? rest : undefined };
+  const payloadRaw: any = { code, name, description, categoryId, brand, unit, purchasePrice, salePrice, minStock, maxStock, supplierId, barcode, attachmentUrl, metadata: Object.keys(rest).length ? rest : undefined };
+  // Normalizar decimales/números a string para columnas decimal en schema zod
+  for (const k of ['purchasePrice','salePrice']) if (payloadRaw[k] !== undefined && payloadRaw[k] !== null) payloadRaw[k] = String(payloadRaw[k]);
+  const payload = payloadRaw;
+  console.log('[products:create] incoming', JSON.stringify(payload));
   const validatedData = insertProductSchema.parse(payload);
+      console.log('[products:create] validated', validatedData.code);
       const product = await storage.createProduct(validatedData);
+      console.log('[products:create] created id=', product.id);
       res.status(201).json(product);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating product:", error);
+      if (error?.code === '23505') {
+        return res.status(409).json({ message: 'Product code already exists' });
+      }
+      if (error?.name === 'ZodError') {
+        return res.status(400).json({ message: 'Invalid product data', issues: error.issues });
+      }
       res.status(500).json({ message: "Failed to create product" });
     }
   });
@@ -421,12 +433,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
   const { code, name, description, categoryId, brand, unit, purchasePrice, salePrice, minStock, maxStock, supplierId, barcode, attachmentUrl, ...rest } = req.body || {};
   const payload: any = { code, name, description, categoryId, brand, unit, purchasePrice, salePrice, minStock, maxStock, supplierId, barcode, attachmentUrl };
+  for (const k of ['purchasePrice','salePrice']) if (payload[k] !== undefined && payload[k] !== null) payload[k] = String(payload[k]);
   if (Object.keys(rest).length) payload.metadata = rest;
+  console.log('[products:update] id=', req.params.id, 'incoming', JSON.stringify(payload));
   const validatedData = insertProductSchema.partial().parse(payload);
       const product = await storage.updateProduct(req.params.id, validatedData);
+      console.log('[products:update] updated id=', product.id);
       res.json(product);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating product:", error);
+      if (error?.code === '23505') {
+        return res.status(409).json({ message: 'Product code already exists' });
+      }
+      if (error?.name === 'ZodError') {
+        return res.status(400).json({ message: 'Invalid product data', issues: error.issues });
+      }
       res.status(500).json({ message: "Failed to update product" });
     }
   });
@@ -439,11 +460,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
 
-      await storage.deleteProduct(req.params.id);
+      const reason = req.body?.reason || req.query?.reason;
+      await storage.deleteProduct(req.params.id, { userId, reason });
+      console.log('[products:delete] id=', req.params.id, 'by=', userId, 'reason=', reason);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting product:", error);
       res.status(500).json({ message: "Failed to delete product" });
+    }
+  });
+
+  // Reactivate a product
+  app.post('/api/products/:id/reactivate', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = extractUserId(req);
+      const user = userId ? await storage.getUser(userId) : undefined;
+      if (!user || !user.role || !['administrator', 'operator'].includes(user.role)) {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+      const reason = req.body?.reason || req.query?.reason;
+      const product = await storage.reactivateProduct(req.params.id, { userId, reason });
+      console.log('[products:reactivate] id=', req.params.id, 'by=', userId, 'reason=', reason);
+      res.json(product);
+    } catch (error: any) {
+      console.error('Error reactivating product:', error);
+      res.status(500).json({ message: 'Failed to reactivate product' });
+    }
+  });
+
+  // Get audit events for a product (deactivate/reactivate)
+  app.get('/api/products/:id/audit', isAuthenticated, async (req: any, res) => {
+    try {
+  const limit = parseInt(req.query.limit as string) || 50;
+  const offset = parseInt(req.query.offset as string) || 0;
+  const events = await storage.getProductDeactivations(req.params.id, limit, offset);
+  res.json({ events, limit, offset });
+    } catch (e) {
+      console.error('Error fetching product audit', e);
+      res.status(500).json({ message: 'Failed to fetch product audit' });
+    }
+  });
+
+  // Internal lightweight user lookup for UI (returns minimal profile)
+  app.get('/api/internal/users/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const u = await storage.getUser(req.params.id);
+      if (!u) return res.status(404).json({ message: 'User not found' });
+      res.json({ id: u.id, username: u.username, firstName: (u as any).firstName || (u as any).first_name, lastName: (u as any).lastName || (u as any).last_name });
+    } catch (e) {
+      console.error('Error fetching internal user', e);
+      res.status(500).json({ message: 'Failed to fetch user' });
     }
   });
 
